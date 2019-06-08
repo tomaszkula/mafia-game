@@ -5,18 +5,17 @@
 #include <colorchat>
 
 #define PLUGIN "Mafia for JB MOD"
-#define VERSION "2.1"
+#define VERSION "2.0"
 #define AUTHOR "tomkul777"
 
 #define MSG_ONE 1
 
 #define ADMIN_MAFIA ADMIN_IMMUNITY
 
-new const serverIP[] = "145.239.16.119:27015";
-//new const serverIP[] = "188.165.19.26:27190";
+new const serverIP[] = "188.165.19.26:27190";
 
 new const g_GamePrefix[] = "^4[Mafia]";
-new const g_MafiaChatPrefix[] = "^4(^3Mafia Chat^4)";
+new const g_MafiaChatPrefix[] = "^4(Mafia Chat)";
 
 new const g_NameOfFractionMenuPrefix[] = "\y[FRAKCJA]";
 new const g_NameOfFractionPrefix[] = "^4[Mafia][Frakcja]";
@@ -32,6 +31,7 @@ new const g_BarmanVoteMenuPrefix[] = "\y[GLOS BARMANA]";
 new const g_BarmanVotePrefix[] = "^4[Mafia][Glos Barmana]";
 new const g_HunterVoteMenuPrefix[] = "\y[GLOS LOWCY]";
 new const g_HunterVotePrefix[] = "^4[Mafia][Glos Lowcy]";
+new const g_PriestAgentBarmanVotePrefix[] = "^4[Mafia][Glos Ksiedza, Agenta i Barmana]";
 new const g_VotesResultPrefix[] = "^4[Mafia][Rezultat nocnych glosowan]";
 
 new const g_TimeForVote = 15;
@@ -46,30 +46,28 @@ enum {
 	NONE
 }
 
-//types of day
 enum {
+	//types of day
 	START,
 	CITY_VOTE,
-	CITY_VOTE_HUNTER,
-	HUNTER_VOTE,
 	CITY_SLEEP,
 	MAFIA_WAKE,
 	MAFIA_VOTE,
 	MAFIA_SLEEP,
-	PRIEST_WAKE,
-	PRIEST_VOTE,
-	PRIEST_SLEEP,
-	AGENT_WAKE,
-	AGENT_VOTE,
-	AGENT_SLEEP,
-	BARMAN_WAKE,
-	BARMAN_VOTE,
-	BARMAN_SLEEP,
+	PRIEST_AGENT_BARMAN_WAKE,
+	PRIEST_AGENT_BARMAN_VOTE,
+	PRIEST_AGENT_BARMAN_SLEEP,
 	CITY_WAKE,
 	VOTES_RESULT,
+	
+	//types of votes
+	HUNTER_VOTE,
+	PRIEST_VOTE,
+	AGENT_VOTE,
+	BARMAN_VOTE
 }
 
-new bool:g_GameStatus, bool:g_MovementStatus, bool:g_ExtraPluginsStatus;
+new bool:g_GameStatus, bool:g_MovementStatus;
 
 new g_GameLeader;
 new Array:g_Mafia, g_Priest, g_Agent, g_Barman, g_Hunter;
@@ -94,11 +92,9 @@ public plugin_init() {
 		set_fail_state("[Mafia] Plugin nie dziala na tym serwerze.");
 	}
 	
-	g_GameLeader = 0;
 	start_configuration();
 	
 	register_event("DeathMsg", "death_msg", "a");
-	register_event("HLTV", "new_round", "a", "1=0", "2=0");
 	register_logevent("end_round", 2, "1=Round_End");
 	
 	register_clcmd("say /mafia", "game_menu");
@@ -108,7 +104,8 @@ public plugin_init() {
 public start_configuration() {
 	g_GameStatus = false;
 	g_MovementStatus = true;
-	g_ExtraPluginsStatus = true;
+	
+	g_GameLeader = 0;
 	
 	g_Mafia = ArrayCreate(1, 4);
 	g_Priest = 0;
@@ -122,7 +119,7 @@ public start_configuration() {
 	g_BarmanChoice = 0;
 	g_HunterChoice = 0;
 	
-	g_HunterSkill = false;
+	g_HunterSkill = true;
 	
 	g_PriestVote = 0;
 	g_AgentVote = 0;
@@ -141,141 +138,143 @@ public start_configuration() {
 }
 
 public client_disconnect(id) {
-	stop_user_tasks(id);
-	g_VoteTime[id] = 0;
-	
 	new nick[33]; get_user_name(id, nick, charsmax(nick));
+	
 	if(id == g_GameLeader) {
 		g_GameLeader = 0;
-		ColorChat(0, RED, "%s ^1Prowadzacy Mafii ^3%s^1 wyszedl z serwera.", g_GamePrefix, nick);
-		
-		if(g_GameStatus) ColorChat(0, RED, "%s ^1Potrzebna osoba do dokonczenia zabawy!", g_GamePrefix);
+		ColorChat(0, RED, "%s ^1Prowadzacy Mafii ^3%s^1 wyszedl z serwera. Potrzebna osoba do dokonczenia zabawy!", g_GamePrefix, nick);
 	} else if(is_user_mafia(id)) {
 		remove_user_mafia(id);
-		ColorChat(0, RED, "%s ^1Czlonek Mafii ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
+		ColorChat(0, RED, "%s ^1Czlonek Mafii ^3%s^1 wyszedl z serwera.", g_GamePrefix, nick);
 		
 		if(ArraySize(g_Mafia) < 1) {
-			ColorChat(0, RED, "%s ^1Ostatni czlonek mafii opuscil gre. Miasto wygralo gre w Mafie!!!", g_GamePrefix);
+			ColorChat(0, RED, "%s ^1Ostatni czlonek mafii wyszedl z serwera. ^3Miasto ^1wygralo!", g_GamePrefix);
 			game_status_manager(false);
 		}
-	} else if(id == g_Priest) {
-		g_Priest = 0;
-		ColorChat(0, RED, "%s ^1Ksiadz ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-	} else if(id == g_Agent) {
-		g_Agent = 0;
-		ColorChat(0, RED, "%s ^1Agent ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-	} else if(id == g_Barman) {
-		g_Barman = 0;
-		ColorChat(0, RED, "%s ^1Barman ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-	} else if(id == g_Hunter) {
-		g_Hunter = 0;
-		g_HunterSkill = false;
-		ColorChat(0, RED, "%s ^1Lowca ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-	} else if(id == g_PriestVote) {
-		g_PriestVote = 0;
-		ColorChat(0, RED, "%s ^1Kandydat na ksiedza ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-	} else if(id == g_AgentVote) {
-		g_AgentVote = 0;
-		ColorChat(0, RED, "%s ^1Kandydat na agenta ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-	} else if(id == g_BarmanVote) {
-		g_BarmanVote = 0;
-		ColorChat(0, RED, "%s ^1Kandydat na barmana ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-	} else if(id == g_HunterVote) {
-		g_HunterVote = 0;
-		ColorChat(0, RED, "%s ^1Kandydat na lowce ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
+	} else {
+		if(id == g_Priest) {
+			g_Priest = 0;
+			g_PriestVote = 0;
+			ColorChat(0, RED, "%s ^1Ksiadz ^3%s^1 wyszedl z serwera.", g_GamePrefix, nick);
+		} else if(id == g_Agent) {
+			g_Agent = 0;
+			g_AgentVote = 0;
+			ColorChat(0, RED, "%s ^1Agent ^3%s^1 wyszedl z serwera.", g_GamePrefix, nick);
+		} else if(id == g_Barman) {
+			g_Barman = 0;
+			g_BarmanVote = 0;
+			ColorChat(0, RED, "%s ^1Barman ^3%s^1 wyszedl z serwera.", g_GamePrefix, nick);
+		} else if(id == g_Hunter) {
+			g_Hunter = 0;
+			g_HunterVote = 0;
+			g_HunterSkill = true;
+			ColorChat(0, RED, "%s ^1Lowca ^3%s^1 wyszedl z serwera.", g_GamePrefix, nick);
+		}
 	}
 	
-	if(g_GameStatus) {
-		new playersCount = players_count();
-		if(playersCount <= ArraySize(g_Mafia)) {
-			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek miasta. Mafia wygrala gre w Mafie!!!", g_GamePrefix);
-			game_status_manager(false);
-		}
-	}
+	if(id == g_PriestVote) g_PriestVote = 0;
+	else if(id == g_AgentVote) g_AgentVote = 0;
+	else if(id == g_BarmanVote) g_BarmanVote = 0;
+	else if(id == g_HunterVote) g_HunterVote = 0;
+	
+	g_VoteTime[id] = 0;
+	
+	stop_user_tasks(id);
 }
 
 public death_msg() {
 	new id = read_data(2);
-	stop_user_tasks(id);
+	new nick[33]; get_user_name(id, nick, charsmax(nick));
+	
+	if(id == g_GameLeader) {
+		g_GameLeader = 0;
+		ColorChat(0, RED, "%s ^1Prowadzacy Mafii, ^3%s^1, zginal.", g_GamePrefix, nick);
+	} else if(is_user_mafia(id)) {
+		remove_user_mafia(id);
+		ColorChat(0, RED, "%s ^3%s ^1zginal, a byl czlonkiem mafii!", g_GamePrefix, nick);
+		
+		if(ArraySize(g_Mafia) < 1) {
+			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek mafii. ^3Miasto ^1wygralo!!!", g_GamePrefix);
+			game_status_manager(false);
+		}
+	} else {
+		if(id == g_Priest) {
+			g_Priest = 0;
+			g_PriestVote = 0;
+			ColorChat(0, RED, "%s ^3%s ^1zginal, a byl ksiedzem!", g_GamePrefix, nick);
+		} else if(id == g_Agent) {
+			g_Agent = 0;
+			g_AgentVote = 0;
+			ColorChat(0, RED, "%s ^3%s ^1zginal, a byl agentem!", g_GamePrefix, nick);
+		} else if(id == g_Barman) {
+			g_Barman = 0;
+			g_BarmanVote = 0;
+			ColorChat(0, RED, "%s ^3%s ^1zginal, a byl barmanem!", g_GamePrefix, nick);
+		} else if(id == g_Hunter) {
+			g_Hunter = 0;
+			g_HunterVote = 0;
+			g_HunterSkill = true;
+			ColorChat(0, RED, "%s ^3%s ^1zginal, a byl lowca!", g_GamePrefix, nick);
+		} else ColorChat(0, RED, "%s ^3%s ^1zginal. Ale kogo to obchodzi jak byl nikim.", g_GamePrefix, nick);
+		
+		new playersCount = players_count();
+		if(playersCount <= ArraySize(g_Mafia)) {
+			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek miasta. ^3Mafia ^1wygrala!", g_GamePrefix);
+			game_status_manager(false);
+		}
+	}
+	
+	if(id == g_PriestVote) g_PriestVote = 0;
+	else if(id == g_AgentVote) g_AgentVote = 0;
+	else if(id == g_BarmanVote) g_BarmanVote = 0;
+	else if(id == g_HunterVote) g_HunterVote = 0;
+	
 	g_VoteTime[id] = 0;
 	fast_day(id);
 	
-	new nick[33]; get_user_name(id, nick, charsmax(nick));
-	if(id == g_GameLeader) {
-		g_GameLeader = 0;
-		ColorChat(0, RED, "%s ^1Prowadzacy Mafii ^3%s ^1zginal.", g_GamePrefix, nick);
-		
-		if(g_GameStatus) ColorChat(0, RED, "%s ^1Potrzebna osoba do dokonczenia zabawy!", g_GamePrefix);
-	} else if(is_user_mafia(id)) {
-		remove_user_mafia(id);
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl czlonkiem mafii!", g_GamePrefix, nick);
-		
-		if(ArraySize(g_Mafia) < 1) {
-			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek mafii. Miasto wygralo gre w Mafie!!!", g_GamePrefix);
-			game_status_manager(false);
-		}
-	} else if(id == g_Priest) {
-		g_Priest = 0;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl ksiedzem!", g_GamePrefix, nick);
-	} else if(id == g_Agent) {
-		g_Agent = 0;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl agentem!", g_GamePrefix, nick);
-	} else if(id == g_Barman) {
-		g_Barman = 0;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl barmanem!", g_GamePrefix, nick);
-	} else if(id == g_Hunter) {
-		g_Hunter = 0;
-		g_HunterSkill = false;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl lowca!", g_GamePrefix, nick);
-	} else if(id == g_PriestVote) {
-		g_PriestVote = 0;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl kandydatem na ksiedza!", g_GamePrefix, nick);
-	} else if(id == g_AgentVote) {
-		g_AgentVote = 0;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl kandydatem na agenta!", g_GamePrefix, nick);
-	} else if(id == g_BarmanVote) {
-		g_BarmanVote = 0;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl kandydatem na barmana!", g_GamePrefix, nick);
-	} else if(id == g_HunterVote) {
-		g_HunterVote = 0;
-		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl kandydatem na lowce!", g_GamePrefix, nick);
-	} else {
-		if(g_GameStatus) ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ale kogo to obchodzi jak byl nikim.", g_GamePrefix, nick);
-	}
-	
-	if(g_GameStatus) {
-		new playersCount = players_count();
-		if(playersCount <= ArraySize(g_Mafia)) {
-			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek miasta. Mafia wygrala gre w Mafie!!!", g_GamePrefix);
-			game_status_manager(false);
-		}
-	}
-}
-
-public new_round() {
-	stop_game_tasks();
-	for(new i = 0; i < 33; i++) {
-		stop_user_tasks(i);
-		if(is_user_playing(i)) fast_day(i);
-	}
-	
-	if(!g_MovementStatus) movement_status_manager(true);
-	if(!g_ExtraPluginsStatus) plugins_status_manager(true);
-	
-	start_configuration();
+	stop_user_tasks(id);
 }
 
 public end_round() {
-	stop_game_tasks();
-	for(new i = 0; i < 33; i++) {
-		stop_user_tasks(i);
-		if(is_user_playing(i)) fast_day(i);
+	if(g_GameStatus) {
+		g_GameStatus = false;
+		
+		if(!g_MovementStatus) movement_status_manager(true);
+		
+		g_Mafia = ArrayCreate(1, 4);
+		g_Priest = 0;
+		g_Agent = 0;
+		g_Barman = 0;
+		g_Hunter = 0;
+		
+		g_MafiaChoice = 0;
+		g_PriestChoice = 0;
+		g_AgentChoice = 0;
+		g_BarmanChoice = 0;
+		g_HunterChoice = 0;
+		
+		g_HunterSkill = true;
+		
+		g_PriestVote = 0;
+		g_AgentVote = 0;
+		g_BarmanVote = 0;
+		g_HunterVote = 0;
+	
+		g_NameOfFraction = MAFIA;
+	
+		g_TypeOfDay = START;
+		g_TypeOfDayStatus = false;
+		
+		stop_game_tasks();
+		for(new i = 0; i < 33; i++) {
+			g_VoteTime[i] = 0;
+			g_VoteCount[i] = 0;
+			
+			if(is_user_playing(i)) fast_day(i);
+		}
 	}
 	
-	if(!g_MovementStatus) movement_status_manager(true);
-	if(!g_ExtraPluginsStatus) plugins_status_manager(true);
-	
-	start_configuration();
+	for(new i = 0; i < 33; i++) stop_user_tasks(i);
 }
 
 public fast_day(id) {
@@ -312,15 +311,9 @@ public game_menu(id) {
 	if(g_MovementStatus) menu_additem(gameMenu, "\y[WLACZ] \wBlokada ruchu", .callback = gameMenuCallback);
 	else menu_additem(gameMenu, "\r[WYLACZ] \wBlokada ruchu", .callback = gameMenuCallback);
 	
-	if(g_ExtraPluginsStatus) menu_additem(gameMenu, "\r[WYLACZ] \wPluginy utrudniajace rozgrywke(vip, etc.)", .callback = gameMenuCallback);
-	else menu_additem(gameMenu, "\y[WLACZ] \wPluginy utrudniajace rozgrywke(vip, etc.)", .callback = gameMenuCallback);
-	
 	if(g_TypeOfDay == START && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie miasta", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == CITY_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie miasta", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == CITY_VOTE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMiasto idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == CITY_VOTE_HUNTER && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie lowcy", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == HUNTER_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie lowcy", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == HUNTER_VOTE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMiasto idzie spac", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == CITY_SLEEP && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wMiasto idzie spac", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == CITY_SLEEP && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMafia budzi sie", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == MAFIA_WAKE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wMafia budzi sie", .callback = gameMenuCallback);
@@ -328,40 +321,19 @@ public game_menu(id) {
 	else if(g_TypeOfDay == MAFIA_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie mafii", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == MAFIA_VOTE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMafia idzie spac", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == MAFIA_SLEEP && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wMafia idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == MAFIA_SLEEP && !g_TypeOfDayStatus) {
-		if(g_Priest) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wKsiadz budzi sie", .callback = gameMenuCallback);
-		else if(g_Agent) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wAgent budzi sie", .callback = gameMenuCallback);
-		else if(g_Barman) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wBarman budzi sie", .callback = gameMenuCallback);
-		else menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMiasto budzi sie", .callback = gameMenuCallback);
-	} else if(g_TypeOfDay == PRIEST_WAKE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wKsiadz budzi sie", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == PRIEST_WAKE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie ksiedza", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == PRIEST_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie ksiedza", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == PRIEST_VOTE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wKsiadz idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == PRIEST_SLEEP && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wKsiadz idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == PRIEST_SLEEP && !g_TypeOfDayStatus) {
-		if(g_Agent) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wAgent budzi sie", .callback = gameMenuCallback);
-		else if(g_Barman) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wBarman budzi sie", .callback = gameMenuCallback);
-		else menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMiasto budzi sie", .callback = gameMenuCallback);
-	} else if(g_TypeOfDay == AGENT_WAKE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wAgent budzi sie", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == AGENT_WAKE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie agenta", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == AGENT_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie agenta", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == AGENT_VOTE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wAgent idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == AGENT_SLEEP && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wAgent idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == AGENT_SLEEP && !g_TypeOfDayStatus) {
-		if(g_Barman) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wBarman budzi sie", .callback = gameMenuCallback);
-		else menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMiasto budzi sie", .callback = gameMenuCallback);
-	} else if(g_TypeOfDay == BARMAN_WAKE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wBarman budzi sie", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == BARMAN_WAKE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie barmana", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == BARMAN_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie barmana", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == BARMAN_VOTE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wBarman idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == BARMAN_SLEEP && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wBarman idzie spac", .callback = gameMenuCallback);
-	else if(g_TypeOfDay == BARMAN_SLEEP && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMiasto budzi sie", .callback = gameMenuCallback);
+	else if(g_TypeOfDay == MAFIA_SLEEP && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wKsiadz, agent i barman budza sie", .callback = gameMenuCallback);
+	else if(g_TypeOfDay == PRIEST_AGENT_BARMAN_WAKE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wKsiadz, agent i barman budza sie", .callback = gameMenuCallback);
+	else if(g_TypeOfDay == PRIEST_AGENT_BARMAN_WAKE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie ksiedza, agenta i barmana", .callback = gameMenuCallback);
+	else if(g_TypeOfDay == PRIEST_AGENT_BARMAN_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie ksiedza, agenta i barmana", .callback = gameMenuCallback);
+	else if(g_TypeOfDay == PRIEST_AGENT_BARMAN_VOTE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wKsiadz, agent i barman ida spac", .callback = gameMenuCallback);
+	else if(g_TypeOfDay == PRIEST_AGENT_BARMAN_SLEEP && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wKsiadz, agent i barman ida spac", .callback = gameMenuCallback);
+	else if(g_TypeOfDay == PRIEST_AGENT_BARMAN_SLEEP && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wMiasto budzi sie", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == CITY_WAKE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wMiasto budzi sie", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == CITY_WAKE && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wRezultat nocnych glosowan", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == VOTES_RESULT && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wRezultat nocnych glosowan", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == VOTES_RESULT && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie miasta", .callback = gameMenuCallback);
 	
-	menu_additem(gameMenu, "\wObsluga graczy", .callback = gameMenuCallback);
+	menu_additem(gameMenu, "\wObsluga graczy(tylko jesli gra wylaczona)", .callback = gameMenuCallback);
 	
 	menu_setprop(gameMenu, MPROP_EXIT, MEXIT_ALL);
 	menu_setprop(gameMenu, MPROP_BACKNAME, "Poprzednia strona");
@@ -380,13 +352,13 @@ public game_menu_callback(id, menu, item) {
 		}
 		
 		return ITEM_DISABLED;
-	} else if(item == 1 || item == 2 || item == 3) {
+	} else if(item == 1 || item == 2) {
 		if(g_GameLeader) {
 			if(g_GameLeader == id) return ITEM_ENABLED;
 		}
 		
 		return ITEM_DISABLED;
-	} else if(item == 5) {
+	} else if(item == 4) {
 		if(g_GameLeader) {
 			if(g_GameLeader == id) {
 				if(!g_GameStatus) return ITEM_ENABLED;
@@ -397,7 +369,7 @@ public game_menu_callback(id, menu, item) {
 	} else {
 		if(g_GameLeader) {
 			if(g_GameLeader == id) {
-				if(g_GameStatus && !g_TypeOfDayStatus) return ITEM_ENABLED;
+				if(g_GameStatus) return ITEM_ENABLED;
 			}
 		}
 		
@@ -419,11 +391,11 @@ public game_menu_handler(id, menu, item) {
 		} else {
 			if(!is_user_admin_mafia(id)) return PLUGIN_HANDLED;
 		}
-	} else if(item == 1 || item == 2 || item == 3) {
+	} else if(item == 1 || item == 2) {
 		if(g_GameLeader) {
 			if(g_GameLeader != id) return PLUGIN_HANDLED;
 		} else return PLUGIN_HANDLED;
-	} else if(item == 5){
+	} else if(item == 4){
 		if(g_GameLeader) {
 			if(g_GameLeader == id) {
 				if(g_GameStatus) return PLUGIN_HANDLED;
@@ -454,17 +426,12 @@ public game_menu_handler(id, menu, item) {
 			game_menu(id);
 		}
 		case 3: {
-			plugins_status_manager(!g_ExtraPluginsStatus);
-			menu_destroy(menu);
-			game_menu(id);
-		}
-		case 4: {
 			type_of_day_manager();
 			menu_destroy(menu);
 			game_menu(id);
 		}
-		case 5: {
-			users_manager_menu(id, 0);
+		case 4: {
+			users_manager_menu(id);
 			menu_destroy(menu);
 		}
 	}
@@ -479,15 +446,11 @@ public game_leader_manager(id) {
 		set_user_godmode(id, 0);
 		
 		ColorChat(0, RED, "%s ^3%s ^1zrezygnowal z Prowadzacego Mafii.", g_GamePrefix, nick);
-		
-		unpause("ac", "statsx.amxx");
 	} else {
 		g_GameLeader = id;
 		set_user_godmode(id, 1);
 		
 		ColorChat(0, RED, "%s ^1Prowadzacym Mafii zostal ^3%s^1! On tu teraz rzadzi!", g_GamePrefix, nick);
-		
-		pause("ac", "statsx.amxx");
 	}
 }
 
@@ -495,7 +458,7 @@ public game_status_manager(bool:status) {
 	if(status) {
 		for(new i = 0; i < 33; i++) {
 			if(g_VoteTime[i] > 0) {
-				ColorChat(g_GameLeader, RED, "%s ^1Nie mozesz teraz wlaczyc zabawy. Jeszcze trwa akceptacja frakcji!", g_GamePrefix);
+				ColorChat(g_GameLeader, RED, "%s ^1Nie mozesz wlaczyc zabawy. Jeszcze trwa akceptacja frakcji!", g_GamePrefix);
 				return;
 			}
 		}
@@ -507,13 +470,37 @@ public game_status_manager(bool:status) {
 		ColorChat(0, RED, "%s ^1Rozpoczecie gry w Mafie!", g_GamePrefix);
 	} else {
 		ColorChat(0, RED, "%s ^1Koniec gry w Mafie!", g_GamePrefix);
-		
 		if(!g_MovementStatus) movement_status_manager(true);
-		if(!g_ExtraPluginsStatus) plugins_status_manager(true);
+	
+		g_Mafia = ArrayCreate(1, 4);
+		g_Priest = 0;
+		g_Agent = 0;
+		g_Barman = 0;
+		g_Hunter = 0;
+		
+		g_MafiaChoice = 0;
+		g_PriestChoice = 0;
+		g_AgentChoice = 0;
+		g_BarmanChoice = 0;
+		g_HunterChoice = 0;
+		
+		g_HunterSkill = true;
+		
+		g_PriestVote = false;
+		g_AgentVote = false;
+		g_BarmanVote = false;
+		g_HunterVote = false;
+	
+		g_NameOfFraction = MAFIA;
+	
+		g_TypeOfDay = START;
+		g_TypeOfDayStatus = false;
 		
 		stop_game_tasks();
-		start_configuration();
 		for(new i = 0; i < 33; i++) {
+			g_VoteTime[i] = 0;
+			g_VoteCount[i] = 0;
+			
 			stop_user_tasks(i);
 			if(is_user_playing(i)) fast_day(i);
 		}
@@ -537,53 +524,17 @@ public movement_status_manager(bool:status) {
 	}
 }
 
-public plugins_status_manager(bool:status) {
-	g_ExtraPluginsStatus = status;
-	
-	if(status) {
-		ColorChat(0, RED, "%s ^1Rozrywkowe pluginy ponownie wlaczone(vip, sklep, ruletka)!", g_GamePrefix);
-		unpause("ac", "jbe_vip.amxx");
-		unpause("ac", "jbe_shop.amxx");
-		unpause("ac", "jbe_roulette.amxx");
-	} else {
-		ColorChat(0, RED, "%s ^1Rozrywkowe pluginy zatrzymane(vip, sklep, ruletka)!", g_GamePrefix);
-		pause("ac", "jbe_vip.amxx");
-		pause("ac", "jbe_shop.amxx");
-		pause("ac", "jbe_roulette.amxx");
-	}
-}
-
 public type_of_day_manager() {
 	switch(g_TypeOfDay) {
 		case START: city_vote();
 		case CITY_VOTE: city_sleep();
-		case CITY_VOTE_HUNTER: hunter_vote();
-		case HUNTER_VOTE: city_sleep();
 		case CITY_SLEEP: mafia_wake();
 		case MAFIA_WAKE: mafia_vote();
 		case MAFIA_VOTE: mafia_sleep();
-		case MAFIA_SLEEP: {
-			if(g_Priest) single_wake(PRIEST_WAKE);
-			else if(g_Agent) single_wake(AGENT_WAKE);
-			else if(g_Barman) single_wake(BARMAN_WAKE);
-			else city_wake();
-		}
-		case PRIEST_WAKE: priest_vote();
-		case PRIEST_VOTE: single_sleep(PRIEST_SLEEP);
-		case PRIEST_SLEEP: {
-			if(g_Agent) single_wake(AGENT_WAKE);
-			else if(g_Barman) single_wake(BARMAN_WAKE);
-			else city_wake();
-		}
-		case AGENT_WAKE: agent_vote();
-		case AGENT_VOTE: single_sleep(AGENT_SLEEP);
-		case AGENT_SLEEP: {
-			if(g_Barman) single_wake(BARMAN_WAKE);
-			else city_wake();
-		}
-		case BARMAN_WAKE: barman_vote();
-		case BARMAN_VOTE: single_sleep(BARMAN_SLEEP);
-		case BARMAN_SLEEP: city_wake();
+		case MAFIA_SLEEP: priest_agent_barman_wake();
+		case PRIEST_AGENT_BARMAN_WAKE: priest_agent_barman_vote();
+		case PRIEST_AGENT_BARMAN_VOTE: priest_agent_barman_sleep();
+		case PRIEST_AGENT_BARMAN_SLEEP: city_wake();
 		case CITY_WAKE: votes_result();
 		case VOTES_RESULT: city_vote();
 	}
@@ -607,10 +558,12 @@ public city_vote_delay() {
 		
 		if(!is_user_playing(idPlayer)) continue;
 		
+		new parameters[30];
 		new szIdPlayer[3]; num_to_str(idPlayer, szIdPlayer, charsmax(szIdPlayer));
+		formatex(parameters, charsmax(parameters), "%s %d", szIdPlayer, CITY_VOTE);
 
 		g_VoteTime[idPlayer] = g_TimeForVote;
-		set_task(1.0, "players_menu", idPlayer + 3000, szIdPlayer, charsmax(szIdPlayer), "b");
+		set_task(1.0, "players_menu", idPlayer + 3000, parameters, charsmax(parameters), "b");
 	}
 	
 	set_task(1.0, "is_city_vote_during", 2000, .flags = "b");
@@ -654,36 +607,64 @@ public city_vote_result() {
 	}
 	
 	if(id == 0) {
-		ColorChat(0, RED, "%s ^1Miasto nikogo nie wybralo, wiec tym razem nikt nie zginie.", g_CityVotePrefix);
+		ColorChat(0, RED, "%s ^1Typ razem nikt nie zginie. Miasto nikogo nie wybralo!", g_CityVotePrefix);
 		type_of_day_status_manager();
 	} else {
 		new nick[33]; get_user_name(id, nick, charsmax(nick));
 		ColorChat(0, RED, "%s ^1Miasto wybralo ^3%s ^4(%d glosow) ^1do zabicia!", g_CityVotePrefix, nick, biggestCount);
 		
 		if(id == g_Hunter && g_HunterSkill) {
-			ColorChat(0, RED, "%s ^3%s ^1jest ^3lowca^1! To jego ostatnia szansa na odwrocenie losu!", g_CityVotePrefix, nick);
-			g_TypeOfDay = CITY_VOTE_HUNTER;
-			type_of_day_status_manager();
+			ColorChat(0, RED, "%s ^3%s ^1jest ^3lowca^1! Teraz to on wybiera kogos do zabicia.", g_HunterVotePrefix, nick);
+			hunter_vote();
 		} else {
 			new szId[3]; num_to_str(id, szId, charsmax(szId));
-			set_task(1.0, "user_kill_delay", 1001, szId, charsmax(szId), "a", 1);
+			set_task(1.5, "user_kill_delay", 1001, szId, charsmax(szId), "a", 1);
 		}
 	}
 	
 	return PLUGIN_HANDLED;
 }
-/////////////////////////////
 
-////////////////////HUNTER VOTE
 public hunter_vote() {
-	g_TypeOfDayStatus = true;
-	g_TypeOfDay = HUNTER_VOTE;
+	ColorChat(g_Hunter, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do zabicia!", g_HunterVotePrefix);
 	
 	g_HunterSkill = false;
+	set_task(3.0, "hunter_vote_delay", 1002, .flags = "a", .repeat = 1);
+}
+
+public hunter_vote_delay() {
+	new parameters[30];
+	new szIdPlayer[3]; num_to_str(g_Hunter, szIdPlayer, charsmax(szIdPlayer));
+	formatex(parameters, charsmax(parameters), "%s %d", szIdPlayer, HUNTER_VOTE);
 	
-	ColorChat(0, RED, "%s ^1Czas na glosowanie lowcy!", g_HunterVotePrefix);
-	ColorChat(g_Hunter, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do zabicia!", g_HunterVotePrefix);
-	set_task(3.0, "single_vote_delay", 1002, .flags = "a", .repeat = 1);
+	g_VoteTime[g_Hunter] = g_TimeForVote;
+	set_task(1.0, "players_menu", g_Hunter + 3000, parameters, charsmax(parameters), "b");
+	
+	set_task(1.0, "is_hunter_vote_during", 2000, .flags = "b");
+}
+
+public hunter_vote_handler(id, menu, item) {
+	if(item < 0) return 0;
+	
+	remove_task(id + 3000);
+	show_menu(id, 0, "^n", 1);
+	g_VoteTime[id] = 0;
+	
+	new szIdPlayer[3], nick[33], access, callback;
+	menu_item_getinfo(menu, item, access, szIdPlayer, charsmax(szIdPlayer), nick, charsmax(nick), callback);
+	new idPlayer = str_to_num(szIdPlayer);
+	
+	ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do zabicia!", g_HunterVotePrefix, nick);
+	g_HunterChoice = idPlayer;
+	
+	return PLUGIN_HANDLED;
+}
+
+public is_hunter_vote_during() {
+	if(g_VoteTime[g_Hunter] > 0) return;
+	
+	remove_task(2000);
+	hunter_vote_result();
 }
 
 public hunter_vote_result() {
@@ -692,12 +673,18 @@ public hunter_vote_result() {
 		ColorChat(0, RED, "%s ^3Lowca ^1wybral ^3%s ^1do zabicia!", g_HunterVotePrefix, nick);
 		
 		new szId[3]; num_to_str(g_HunterChoice, szId, charsmax(szId));
-		set_task(1.0, "user_kill_delay", 1003, szId, charsmax(szId), "a", 1);
+		set_task(1.5, "user_kill_delay", 1003, szId, charsmax(szId), "a", 1);
 		g_HunterChoice = 0;
 	} else {
-		ColorChat(0, RED, "%s ^3Lowca ^1nikogo nie wybral i zmarnowal swoja szanse!", g_HunterVotePrefix);
+		ColorChat(0, RED, "%s ^3Lowca ^1nikogo nie wybral. Tym razem mu darujemy!", g_HunterVotePrefix);
 		type_of_day_status_manager();
 	}
+}
+
+public user_kill_delay(data[]) {
+	new id = str_to_num(data);
+	user_kill(id);
+	type_of_day_status_manager();
 }
 /////////////////////////////
 
@@ -705,6 +692,8 @@ public hunter_vote_result() {
 public city_sleep() {
 	g_TypeOfDayStatus = true;
 	g_TypeOfDay = CITY_SLEEP;
+	
+	ColorChat(0, RED, "%s ^1Miasto zasypia!", g_GamePrefix);
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.35, 0, 2.0, 4.0, 0.1, 0.3, 2);
 	new players[32], playersNumber; get_players(players, playersNumber);
@@ -729,7 +718,7 @@ public city_sleep() {
 public night(data[]) {
 	new szId[3], szTypeOfFade[2];
 	split(data, szId, charsmax(szId), szTypeOfFade, charsmax(szTypeOfFade), " ");
-	new id = str_to_num(szId), short:typeOfFade = short:str_to_num(szTypeOfFade);
+	new id = str_to_num(szId), short:typeOfFade = str_to_num(szTypeOfFade);
 	
 	static msgScreenFade;
 	if(!msgScreenFade) msgScreenFade = get_user_msgid("ScreenFade");
@@ -751,6 +740,8 @@ public mafia_wake() {
 	g_TypeOfDayStatus = true;
 	g_TypeOfDay = MAFIA_WAKE;
 	
+	ColorChat(0, RED, "%s ^1Mafia budzi sie!", g_GamePrefix);
+	
 	set_hudmessage(255, 255, 255, -1.0, 0.35, 0, 2.0, 4.0, 0.1, 0.3, 2);
 	new players[32], playersNumber; get_players(players, playersNumber);
 	for(new i = 0; i < playersNumber; i++) {
@@ -768,8 +759,6 @@ public mafia_wake() {
 		new szIdPlayer[3]; num_to_str(idPlayer, szIdPlayer, charsmax(szIdPlayer));
 		formatex(parameters, charsmax(parameters), "%s 0", szIdPlayer);
 		set_task(0.2, "night", idPlayer + 500, parameters, charsmax(parameters), "a", 1);
-		
-		ColorChat(idPlayer, RED, "%s ^1Komenda^3 /chat tekst ^1sluzy do porozumienia sie z innymi czlonkami mafii!", g_GamePrefix);
 	}
 	
 	set_task(2.0, "type_of_day_delay", 1000, .flags = "a", .repeat = 1);
@@ -795,10 +784,12 @@ public mafia_vote_delay() {
 	for(new i = 0; i < ArraySize(g_Mafia); i++) {
 		new idPlayer = ArrayGetCell(g_Mafia, i);
 		
+		new parameters[30];
 		new szIdPlayer[3]; num_to_str(idPlayer, szIdPlayer, charsmax(szIdPlayer));
+		formatex(parameters, charsmax(parameters), "%s %d", szIdPlayer, MAFIA_VOTE);
 		
 		g_VoteTime[idPlayer] = g_TimeForVote;
-		set_task(1.0, "players_menu", idPlayer + 3000, szIdPlayer, charsmax(szIdPlayer), "b");
+		set_task(1.0, "players_menu", idPlayer + 3000, parameters, charsmax(parameters), "b");
 	}
 	
 	set_task(1.0, "is_mafia_vote_during", 2000, .flags = "b");
@@ -846,9 +837,7 @@ public mafia_vote_result() {
 		new idPlayer = ArrayGetCell(g_Mafia, i);
 		
 		new nick[33]; get_user_name(g_MafiaChoice, nick, charsmax(nick));
-		
-		if(g_MafiaChoice) ColorChat(idPlayer, RED, "%s ^1Ostatecznie wybraliscie ^3%s ^1do zabicia!", g_MafiaVotePrefix, nick);
-		else ColorChat(idPlayer, RED, "%s ^1Ostatecznie nikogo nie wybraliscie do zabicia!", g_MafiaVotePrefix);
+		ColorChat(idPlayer, RED, "%s ^1Ostatecznie wybraliscie ^3%s ^1do zabicia!", g_MafiaVotePrefix, nick);
 	}
 	
 	type_of_day_status_manager();
@@ -859,6 +848,8 @@ public mafia_vote_result() {
 public mafia_sleep() {
 	g_TypeOfDayStatus = true;
 	g_TypeOfDay = MAFIA_SLEEP;
+	
+	ColorChat(0, RED, "%s ^1Mafia zasypia!", g_GamePrefix);
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.35, 0, 2.0, 4.0, 0.1, 0.3, 2);
 	new players[32], playersNumber; get_players(players, playersNumber);
@@ -882,101 +873,102 @@ public mafia_sleep() {
 		set_task(1.8, "night", idPlayer + 500, parameters, charsmax(parameters), "a", 1);
 	}
 	
-	set_task(2.0, "type_of_day_delay", 1000, .flags = "a", .repeat = 1);
+	set_task(3.0, "type_of_day_delay", 1000, .flags = "a", .repeat = 1);
 }
 /////////////////////////////
 
-////////////////////SINGLE WAKE
-public single_wake(typeOfDay) {
+////////////////////PRIEST AGENT BARMAN WAKE
+public priest_agent_barman_wake() {
 	g_TypeOfDayStatus = true;
+	g_TypeOfDay = PRIEST_AGENT_BARMAN_WAKE;
 	
-	new hudMsg[100], id;
-	switch(typeOfDay) {
-		case PRIEST_WAKE: {
-			g_TypeOfDay = PRIEST_WAKE;
-			id = g_Priest;
-			hudMsg = "Ksiadz budzi sie!";
-		}
-		case AGENT_WAKE: {
-			g_TypeOfDay = AGENT_WAKE;
-			id = g_Agent;
-			hudMsg = "Agent budzi sie!";
-		}
-		case BARMAN_WAKE: {
-			g_TypeOfDay = BARMAN_WAKE;
-			id = g_Barman;
-			hudMsg = "Barman budzi sie!";
-		}
-	}
+	ColorChat(0, RED, "%s ^1Ksiadz, agent i barman budza sie!", g_GamePrefix);
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.35, 0, 2.0, 4.0, 0.1, 0.3, 2);
-	
 	new players[32], playersNumber; get_players(players, playersNumber);
 	for(new i = 0; i < playersNumber; i++) {
 		new idPlayer = players[i];
 		
 		if(!is_user_playing(idPlayer)) continue;
 		
-		show_hudmessage(idPlayer, hudMsg);		
+		show_hudmessage(idPlayer, "Ksiadz, agent i barman budza sie!");		
 	}
 	
 	new parameters[5];
-	if(id) {
-		new szId[3]; num_to_str(id, szId, charsmax(szId));
-		formatex(parameters, charsmax(parameters), "%s 0", szId);
-		set_task(0.2, "night", id + 500, parameters, charsmax(parameters), "a", 1);
+	if(g_Priest) {
+		new szPriest[3]; num_to_str(g_Priest, szPriest, charsmax(szPriest));
+		formatex(parameters, charsmax(parameters), "%s 0", szPriest);
+		set_task(0.2, "night", g_Priest + 500, parameters, charsmax(parameters), "a", 1);
 	}
 	
+	if(g_Agent) {
+		new szAgent[3]; num_to_str(g_Agent, szAgent, charsmax(szAgent));
+		formatex(parameters, charsmax(parameters), "%s 0", szAgent);
+		set_task(0.2, "night", g_Agent + 500, parameters, charsmax(parameters), "a", 1);
+	}
+
+	if(g_Barman) {
+		new szBarman[3]; num_to_str(g_Barman, szBarman, charsmax(szBarman));
+		formatex(parameters, charsmax(parameters), "%s 0", szBarman);
+		set_task(0.2, "night", g_Barman + 500, parameters, charsmax(parameters), "a", 1);
+	}
 	set_task(2.0, "type_of_day_delay", 1000, .flags = "a", .repeat = 1);
 }
 /////////////////////////////
 
-////////////////////SINGLE VOTE
-public priest_vote() {
+////////////////////PRIEST AGENT BARMAN VOTE
+public priest_agent_barman_vote() {
 	g_TypeOfDayStatus = true;
-	g_TypeOfDay = PRIEST_VOTE;
+	g_TypeOfDay = PRIEST_AGENT_BARMAN_VOTE;
 	
-	ColorChat(0, RED, "%s ^1Czas na glosowanie ksiedza!", g_PriestVotePrefix);
-	ColorChat(g_Priest, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do modlitwy!", g_PriestVotePrefix);
-	set_task(3.0, "single_vote_delay", 1002, .flags = "a", .repeat = 1);
-}
-
-public agent_vote() {
-	g_TypeOfDayStatus = true;
-	g_TypeOfDay = AGENT_VOTE;
+	ColorChat(0, RED, "%s ^1Czas na glosowanie ksiedza, agenta i barmana!", g_PriestAgentBarmanVotePrefix);
 	
-	ColorChat(0, RED, "%s ^1Czas na glosowanie agenta!", g_AgentVotePrefix);
-	ColorChat(g_Agent, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do sprawdzenia!", g_AgentVotePrefix);
-	set_task(3.0, "single_vote_delay", 1002, .flags = "a", .repeat = 1);
-}
-
-public barman_vote() {
-	g_TypeOfDayStatus = true;
-	g_TypeOfDay = BARMAN_VOTE;
-	
-	ColorChat(0, RED, "%s ^1Czas na glosowanie barmana!", g_BarmanVotePrefix);
-	ColorChat(g_Barman, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do zabicia!", g_BarmanVotePrefix);
-	set_task(3.0, "single_vote_delay", 1002, .flags = "a", .repeat = 1);
-}
-
-public single_vote_delay() {
-	new id;
-	switch(g_TypeOfDay) {
-		case HUNTER_VOTE: id = g_Hunter;
-		case PRIEST_VOTE: id = g_Priest;
-		case AGENT_VOTE: id = g_Agent;
-		case BARMAN_VOTE: id = g_Barman;
+	if(g_Priest) {
+		ColorChat(g_Priest, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do pomodlenia!", g_PriestVotePrefix);
+		set_task(3.0, "priest_vote_delay", 1000, .flags = "a", .repeat = 1);
 	}
 	
-	g_VoteTime[id] = g_TimeForVote;
+	if(g_Agent) {
+		ColorChat(g_Agent, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do sprawdzenia!", g_AgentVotePrefix);
+		set_task(3.0, "agent_vote_delay", 1001, .flags = "a", .repeat = 1);
+	}
 	
-	new szId[3];  num_to_str(id, szId, charsmax(szId));
-	set_task(1.0, "players_menu", id + 3000, szId, charsmax(szId), "b");
+	if(g_Barman) {
+		ColorChat(g_Barman, RED, "%s ^1Za^3 3s ^1rozpocznie sie vote w celu wybrania osoby do upicia!", g_BarmanVotePrefix);
+		set_task(3.0, "barman_vote_delay", 1002, .flags = "a", .repeat = 1);
+	}
 	
-	set_task(1.5, "is_single_vote_during", 2000, szId, charsmax(szId), "b");
+	set_task(4.2, "is_priest_agent_barman_vote_d", 2000, .flags = "b");
 }
 
-public single_vote_handler(id, menu, item) {
+public priest_vote_delay() {
+	new parameters[30];
+	new szIdPlayer[3]; num_to_str(g_Priest, szIdPlayer, charsmax(szIdPlayer));
+	formatex(parameters, charsmax(parameters), "%s %d", szIdPlayer, PRIEST_VOTE);
+	
+	g_VoteTime[g_Priest] = g_TimeForVote;
+	set_task(1.0, "players_menu", g_Priest + 3000, parameters, charsmax(parameters), "b");
+}
+
+public agent_vote_delay() {
+	new parameters[30];
+	new szIdPlayer[3]; num_to_str(g_Agent, szIdPlayer, charsmax(szIdPlayer));
+	formatex(parameters, charsmax(parameters), "%s %d", szIdPlayer, AGENT_VOTE);
+	
+	g_VoteTime[g_Agent] = g_TimeForVote;
+	set_task(1.0, "players_menu", g_Agent + 3000, parameters, charsmax(parameters), "b");
+}
+
+public barman_vote_delay() {
+	new parameters[30];
+	new szIdPlayer[3]; num_to_str(g_Barman, szIdPlayer, charsmax(szIdPlayer));
+	formatex(parameters, charsmax(parameters), "%s %d", szIdPlayer, BARMAN_VOTE);
+	
+	g_VoteTime[g_Barman] = g_TimeForVote;
+	set_task(1.0, "players_menu", g_Barman + 3000, parameters, charsmax(parameters), "b");
+}
+
+public priest_vote_handler(id, menu, item) {
 	if(item < 0) return 0;
 	
 	remove_task(id + 3000);
@@ -987,89 +979,97 @@ public single_vote_handler(id, menu, item) {
 	menu_item_getinfo(menu, item, access, szIdPlayer, charsmax(szIdPlayer), nick, charsmax(nick), callback);
 	new idPlayer = str_to_num(szIdPlayer);
 	
-	switch(g_TypeOfDay) {
-		case HUNTER_VOTE: {
-			ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do zabicia!", g_HunterVotePrefix, nick);
-			g_HunterChoice = idPlayer;
-		}
-		case PRIEST_VOTE: {
-			ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do modlitwy!", g_PriestVotePrefix, nick);
-			g_PriestChoice = idPlayer;
-		}
-		case AGENT_VOTE: {
-			ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do sprawdzenia!", g_AgentVotePrefix, nick);
-			g_AgentChoice = idPlayer;
-		}
-		case BARMAN_VOTE: {
-			ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do upicia!", g_BarmanVotePrefix, nick);
-			g_BarmanChoice = idPlayer;
-		}
-	}
+	ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do uleczenia!", g_PriestVotePrefix, nick);
+	g_PriestChoice = idPlayer;
 	
 	return PLUGIN_HANDLED;
 }
 
-public is_single_vote_during(data[]) {
-	new id = str_to_num(data);
-	if(g_VoteTime[id] > 0) return;
+public agent_vote_handler(id, menu, item) {
+	if(item < 0) return 0;
 	
-	remove_task(2000);
+	remove_task(id + 3000);
+	show_menu(id, 0, "^n", 1);
+	g_VoteTime[id] = 0;
 	
-	if(g_TypeOfDay == HUNTER_VOTE) hunter_vote_result();
-	else type_of_day_status_manager();
+	new szIdPlayer[3], nick[33], access, callback;
+	menu_item_getinfo(menu, item, access, szIdPlayer, charsmax(szIdPlayer), nick, charsmax(nick), callback);
+	new idPlayer = str_to_num(szIdPlayer);
+	
+	ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do sprawdzenia!", g_AgentVotePrefix, nick);
+	g_AgentChoice = idPlayer;
+	
+	return PLUGIN_HANDLED;
 }
 
-public user_kill_delay(data[]) {
-	new id = str_to_num(data);
-	user_kill(id);
+public barman_vote_handler(id, menu, item) {
+	if(item < 0) return 0;
+	
+	remove_task(id + 3000);
+	show_menu(id, 0, "^n", 1);
+	g_VoteTime[id] = 0;
+	
+	new szIdPlayer[3], nick[33], access, callback;
+	menu_item_getinfo(menu, item, access, szIdPlayer, charsmax(szIdPlayer), nick, charsmax(nick), callback);
+	new idPlayer = str_to_num(szIdPlayer);
+	
+	ColorChat(id, RED, "%s ^1Wybrales ^3%s ^1do upicia!", g_BarmanVotePrefix, nick);
+	g_BarmanChoice = idPlayer;
+	
+	return PLUGIN_HANDLED;
+}
+
+public is_priest_agent_barman_vote_d() {
+	if(g_VoteTime[g_Priest] > 0 || g_VoteTime[g_Agent] > 0 || g_VoteTime[g_Barman] > 0) return;
+	
+	remove_task(2000);
 	type_of_day_status_manager();
 }
 /////////////////////////////
 
-////////////////////SINGLE SLEEP
-public single_sleep(typeOfDay) {
+////////////////////PRIEST AGENT BARMAN SLEEP
+public priest_agent_barman_sleep() {
 	g_TypeOfDayStatus = true;
+	g_TypeOfDay = PRIEST_AGENT_BARMAN_SLEEP;
 	
-	new hudMsg[100], id;
-	switch(typeOfDay) {
-		case PRIEST_SLEEP: {
-			g_TypeOfDay = PRIEST_SLEEP;
-			id = g_Priest;
-			hudMsg = "Ksiadz idzie spac!";
-		}
-		case AGENT_SLEEP: {
-			g_TypeOfDay = AGENT_SLEEP;
-			id = g_Agent;
-			hudMsg = "Agent idzie spac!";
-		}
-		case BARMAN_SLEEP: {
-			g_TypeOfDay = BARMAN_SLEEP;
-			id = g_Barman;
-			hudMsg = "Barman idzie spac!";
-		}
-	}
+	ColorChat(0, RED, "%s ^1Ksiadz, agent i barman ida spac!", g_GamePrefix);
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.35, 0, 2.0, 4.0, 0.1, 0.3, 2);
-	
 	new players[32], playersNumber; get_players(players, playersNumber);
 	for(new i = 0; i < playersNumber; i++) {
 		new idPlayer = players[i];
 		
 		if(!is_user_playing(idPlayer)) continue;
 		
-		show_hudmessage(idPlayer, hudMsg);		
+		show_hudmessage(idPlayer, "Ksiadz, agent i barman ida spac");	
 	}
 	
 	new parameters[5];
-	if(id) {
-		new szId[3]; num_to_str(id, szId, charsmax(szId));
-		formatex(parameters, charsmax(parameters), "%s 1", szId);
-		set_task(0.2, "night", id + 500, parameters, charsmax(parameters), "a", 1);
-		formatex(parameters, charsmax(parameters), "%s 4", szId);
-		set_task(1.8, "night", id + 500, parameters, charsmax(parameters), "a", 1);
+	if(g_Priest) {
+		new szIdPlayer[3]; num_to_str(g_Priest, szIdPlayer, charsmax(szIdPlayer));
+		formatex(parameters, charsmax(parameters), "%s 1", szIdPlayer);
+		set_task(0.2, "night", g_Priest + 500, parameters, charsmax(parameters), "a", 1);
+		formatex(parameters, charsmax(parameters), "%s 4", szIdPlayer);
+		set_task(1.8, "night", g_Priest + 500, parameters, charsmax(parameters), "a", 1);
 	}
 	
-	set_task(2.0, "type_of_day_delay", 1000, .flags = "a", .repeat = 1);
+	if(g_Agent) {
+		new szIdPlayer[3]; num_to_str(g_Agent, szIdPlayer, charsmax(szIdPlayer));
+		formatex(parameters, charsmax(parameters), "%s 1", szIdPlayer);
+		set_task(0.2, "night", g_Agent + 500, parameters, charsmax(parameters), "a", 1);
+		formatex(parameters, charsmax(parameters), "%s 4", szIdPlayer);
+		set_task(1.8, "night", g_Agent + 500, parameters, charsmax(parameters), "a", 1);
+	}
+	
+	if(g_Barman) {
+		new szIdPlayer[3]; num_to_str(g_Barman, szIdPlayer, charsmax(szIdPlayer));
+		formatex(parameters, charsmax(parameters), "%s 1", szIdPlayer);
+		set_task(0.2, "night", g_Barman + 500, parameters, charsmax(parameters), "a", 1);
+		formatex(parameters, charsmax(parameters), "%s 4", szIdPlayer);
+		set_task(1.8, "night", g_Barman + 500, parameters, charsmax(parameters), "a", 1);
+	}
+	
+	set_task(3.0, "type_of_day_delay", 1000, .flags = "a", .repeat = 1);
 }
 /////////////////////////////
 
@@ -1077,6 +1077,8 @@ public single_sleep(typeOfDay) {
 public city_wake() {
 	g_TypeOfDayStatus = true;
 	g_TypeOfDay = CITY_WAKE;
+	
+	ColorChat(0, RED, "%s ^1Miasto budzi sie!", g_GamePrefix);
 	
 	set_hudmessage(255, 255, 255, -1.0, 0.35, 0, 2.0, 4.0, 0.1, 0.3, 2);
 	new players[32], playersNumber; get_players(players, playersNumber);
@@ -1133,7 +1135,7 @@ public votes_result_delay() {
 			}
 		}
 	} else {
-		ColorChat(0, RED, "%s ^1Mafia nikogo nie wybrala do zabicia. Glosy ksiedza i barmana sa niepotrzebne.", g_VotesResultPrefix);
+		ColorChat(0, RED, "%s ^1Mafia nikogo nie wybrala do zabicia, wiec kogo interesuja wybor ksiedza?", g_VotesResultPrefix);
 		
 		if(g_Agent) {
 			set_task(1.0, "agent_result", 1001, .flags = "a", .repeat = 1);
@@ -1144,10 +1146,6 @@ public votes_result_delay() {
 		
 	}
 	
-	set_task(4.0, "zeruj", 1008, .flags = "a", .repeat = 1);
-}
-
-public zeruj() {
 	g_MafiaChoice = 0;
 	g_PriestChoice = 0;
 	g_AgentChoice = 0;
@@ -1220,15 +1218,9 @@ public type_of_day_status_manager() {
 		case MAFIA_WAKE: formatex(msg, charsmax(msg), "%s ^1Mafia obudzila sie." ,g_GamePrefix);
 		case MAFIA_VOTE: formatex(msg, charsmax(msg), "%s ^1Glosowanie mafii zostalo zakonczone." ,g_GamePrefix);
 		case MAFIA_SLEEP: formatex(msg, charsmax(msg), "%s ^1Mafia zasnela." ,g_GamePrefix);
-		case PRIEST_WAKE: formatex(msg, charsmax(msg), "%s ^1Ksiadz obudzil sie." ,g_GamePrefix);
-		case PRIEST_VOTE: formatex(msg, charsmax(msg), "%s ^1Glosowanie ksiedza zostalo zakonczone." ,g_GamePrefix);
-		case PRIEST_SLEEP: formatex(msg, charsmax(msg), "%s ^1Ksiadz zasnal." ,g_GamePrefix);
-		case AGENT_WAKE: formatex(msg, charsmax(msg), "%s ^1Agent obudzil sie." ,g_GamePrefix);
-		case AGENT_VOTE: formatex(msg, charsmax(msg), "%s ^1Glosowanie agenta zostalo zakonczone." ,g_GamePrefix);
-		case AGENT_SLEEP: formatex(msg, charsmax(msg), "%s ^1Agent zasnal." ,g_GamePrefix);
-		case BARMAN_WAKE: formatex(msg, charsmax(msg), "%s ^1Barman obudzil sie." ,g_GamePrefix);
-		case BARMAN_VOTE: formatex(msg, charsmax(msg), "%s ^1Glosowanie barmana zostalo zakonczone." ,g_GamePrefix);
-		case BARMAN_SLEEP: formatex(msg, charsmax(msg), "%s ^1Barman zasnal." ,g_GamePrefix);
+		case PRIEST_AGENT_BARMAN_WAKE: formatex(msg, charsmax(msg), "%s ^1Ksiadz, agent i barman obudzili sie." ,g_GamePrefix);
+		case PRIEST_AGENT_BARMAN_VOTE: formatex(msg, charsmax(msg), "%s ^1Glosowanie ksiedza, agenta i barmana zostalo zakonczone." ,g_GamePrefix);
+		case PRIEST_AGENT_BARMAN_SLEEP: formatex(msg, charsmax(msg), "%s ^1Ksiadz, agent i barman zasneli." ,g_GamePrefix);
 		case CITY_WAKE: formatex(msg, charsmax(msg), "%s ^1Miasto obudzilo sie" ,g_GamePrefix);
 		case VOTES_RESULT: formatex(msg, charsmax(msg), "%s ^1Nocne glosowania zostaly rozstrzygniete" ,g_GamePrefix);
 	}
@@ -1236,7 +1228,7 @@ public type_of_day_status_manager() {
 	ColorChat(0, RED, msg);
 }
 
-public users_manager_menu(id, page) {
+public users_manager_menu(id) {
 	new usersManagerMenu = menu_create("[Mafia] Menu Zarzadzania Graczami", "users_manager_menu_handler");
 	new usersManagerMenuCallback = menu_makecallback("users_manager_menu_callback");
 	
@@ -1246,7 +1238,7 @@ public users_manager_menu(id, page) {
 		
 		if(!is_user_playing(idPlayer)) continue;
 		
-		if(j % 6 == 0) {
+		if(j % 7 == 0) {
 			new menuItemTitle[60];
 			switch(g_NameOfFraction) {
 				case MAFIA: formatex(menuItemTitle, charsmax(menuItemTitle), "%s \wDodaj mafioze", g_NameOfFractionMenuPrefix);
@@ -1261,25 +1253,15 @@ public users_manager_menu(id, page) {
 		j++;
 		
 		new szIdPlayer[3]; num_to_str(idPlayer, szIdPlayer, charsmax(szIdPlayer));
-		
-		new parameters[30];
 		new nick[33]; get_user_name(idPlayer, nick, charsmax(nick));
-		new szFraction[15] = "";
-		if(is_user_mafia(idPlayer)) szFraction = "\y[MAFIA]";
-		else if(idPlayer == g_Priest) szFraction = "\y[PRIEST]";
-		else if(idPlayer == g_Agent) szFraction = "\y[AGENT]";
-		else if(idPlayer == g_Barman) szFraction = "\y[BARMAN]";
-		else if(idPlayer == g_Hunter) szFraction = "\y[LOWCA]";
-		formatex(parameters, charsmax(parameters), "%s ^t^t^t%s", nick, szFraction);
-		
-		menu_additem(usersManagerMenu, parameters, szIdPlayer, .callback = usersManagerMenuCallback);
+		menu_additem(usersManagerMenu, nick, szIdPlayer, .callback = usersManagerMenuCallback);
 	}
 	
 	menu_setprop(usersManagerMenu, MPROP_EXIT, MEXIT_ALL);
 	menu_setprop(usersManagerMenu, MPROP_BACKNAME, "Poprzednia strona");
 	menu_setprop(usersManagerMenu, MPROP_NEXTNAME, "Nastepna strona");
 	menu_setprop(usersManagerMenu, MPROP_EXITNAME, "Wroc do Menu Glownego");
-	menu_display(id, usersManagerMenu, page);
+	menu_display(id, usersManagerMenu);
 }
 
 public users_manager_menu_callback(id, menu, item) {
@@ -1405,9 +1387,7 @@ public users_manager_menu_handler(id, menu, item) {
 	}
 	
 	menu_destroy(menu);
-	
-	new page = item / 7;
-	users_manager_menu(id, page);
+	users_manager_menu(id);
 	
 	return PLUGIN_HANDLED;
 }
@@ -1516,7 +1496,6 @@ public accept_fraction_menu_handler(id, menu, item) {
 					formatex(msgGameLeader, charsmax(msgGameLeader), "%s ^3%s ^1zgodzil sie zostac ^3lowca^1!", g_NameOfFractionPrefix, nick);
 					g_Hunter = id;
 					g_HunterVote = 0;
-					g_HunterSkill = true;
 				}
 			}
 		}
@@ -1551,7 +1530,6 @@ public accept_fraction_menu_handler(id, menu, item) {
 	}
 	ColorChat(g_GameLeader, RED, msgGameLeader);
 	ColorChat(id, RED, msgPlayer);
-	if(is_user_mafia(id)) ColorChat(id, RED, "%s ^1Komenda^3 /chat tekst ^1sluzy do porozumienia sie z innymi czlonkami mafii!", g_GamePrefix);
 	
 	menu_destroy(menu);
 	
@@ -1586,36 +1564,34 @@ public mafia_chat(id) {
 }
 
 public players_menu(data[]) {
-	new id = str_to_num(data);
-	
-	new m1, m2, page;
-	player_menu_info(id, m1, m2, page);
+	new szId[3], szTypeOfDay[20]; split(data, szId, charsmax(szId), szTypeOfDay, charsmax(szTypeOfDay), " ");
+	new id = str_to_num(szId), typeOfDay = str_to_num(szTypeOfDay);
 	
 	new szMenuTitle[60], handler[30];
-	switch(g_TypeOfDay) {
+	switch(typeOfDay) {
 		case CITY_VOTE: {
 			formatex(szMenuTitle, charsmax(szMenuTitle), "[%ds] %s \wWybierz osobe do zabicia", g_VoteTime[id], g_CityVoteMenuPrefix);
 			handler = "city_vote_handler";
 		}
 		case HUNTER_VOTE: {
 			formatex(szMenuTitle, charsmax(szMenuTitle), "[%ds] %s \wWybierz osobe do zabicia", g_VoteTime[id], g_HunterVoteMenuPrefix);
-			handler = "single_vote_handler";
+			handler = "hunter_vote_handler";
 		}
 		case MAFIA_VOTE: {
 			formatex(szMenuTitle, charsmax(szMenuTitle), "[%ds] %s \wWybierz osobe do zabicia", g_VoteTime[id], g_MafiaVoteMenuPrefix);
 			handler = "mafia_vote_handler";
 		}
 		case PRIEST_VOTE: {
-			formatex(szMenuTitle, charsmax(szMenuTitle), "[%ds] %s \wWybierz osobe do modlitwy", g_VoteTime[id], g_PriestVoteMenuPrefix);
-			handler = "single_vote_handler";
+			formatex(szMenuTitle, charsmax(szMenuTitle), "[%ds] %s \wWybierz osobe do pomodlenia", g_VoteTime[id], g_PriestVoteMenuPrefix);
+			handler = "priest_vote_handler";
 		}
 		case AGENT_VOTE: {
 			formatex(szMenuTitle, charsmax(szMenuTitle), "[%ds] %s \wWybierz osobe do sprawdzenia", g_VoteTime[id], g_AgentVoteMenuPrefix);
-			handler = "single_vote_handler";
+			handler = "agent_vote_handler";
 		}
 		case BARMAN_VOTE: {
 			formatex(szMenuTitle, charsmax(szMenuTitle), "[%ds] %s \wWybierz osobe do upicia", g_VoteTime[id], g_BarmanVoteMenuPrefix);
-			handler = "single_vote_handler";
+			handler = "barman_vote_handler";
 		}
 	}
 
@@ -1635,7 +1611,7 @@ public players_menu(data[]) {
 	menu_setprop(playersMenu, MPROP_EXIT, MEXIT_NEVER);
 	menu_setprop(playersMenu, MPROP_BACKNAME, "Poprzednia strona");
 	menu_setprop(playersMenu, MPROP_NEXTNAME, "Nastepna strona");
-	menu_display(id, playersMenu, page);
+	menu_display(id, playersMenu);
 	
 	g_VoteTime[id]--;
 	if(g_VoteTime[id] < 0) {
@@ -1671,7 +1647,7 @@ public stop_user_tasks(id) {
 }
 
 public stop_game_tasks() {
-	for(new i = 1000; i < 1009; i++) {
+	for(new i = 1000; i < 1006; i++) {
 		if(task_exists(i)) remove_task(i);
 	}
 	
