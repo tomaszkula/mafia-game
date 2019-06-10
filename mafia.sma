@@ -12,8 +12,8 @@
 
 #define ADMIN_MAFIA ADMIN_IMMUNITY
 
-new const serverIP[] = "145.239.16.119:27015";
-//new const serverIP[] = "188.165.19.26:27190";
+//new const serverIP[] = "145.239.16.119:27015";
+new const serverIP[] = "188.165.19.26:27190";
 
 new const g_GamePrefix[] = "^4[Mafia]";
 new const g_MafiaChatPrefix[] = "^4(^3Mafia Chat^4)";
@@ -36,7 +36,6 @@ new const g_VotesResultPrefix[] = "^4[Mafia][Rezultat nocnych glosowan]";
 
 new const g_TimeForVote = 15;
 
-//names of fractions
 enum {
 	MAFIA,
 	PRIEST,
@@ -46,7 +45,6 @@ enum {
 	NONE
 }
 
-//types of day
 enum {
 	START,
 	CITY_VOTE,
@@ -101,7 +99,8 @@ public plugin_init() {
 	register_event("HLTV", "new_round", "a", "1=0", "2=0");
 	register_logevent("end_round", 2, "1=Round_End");
 	
-	register_clcmd("say /mafia", "game_menu");
+	register_clcmd("say /mafia", "game_rules");
+	register_clcmd("say /mafia777", "game_menu");
 	register_clcmd("say", "mafia_chat");
 }
 
@@ -153,11 +152,6 @@ public client_disconnect(id) {
 	} else if(is_user_mafia(id)) {
 		remove_user_mafia(id);
 		ColorChat(0, RED, "%s ^1Czlonek Mafii ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
-		
-		if(ArraySize(g_Mafia) < 1) {
-			ColorChat(0, RED, "%s ^1Ostatni czlonek mafii opuscil gre. Miasto wygralo gre w Mafie!!!", g_GamePrefix);
-			game_status_manager(false);
-		}
 	} else if(id == g_Priest) {
 		g_Priest = 0;
 		ColorChat(0, RED, "%s ^1Ksiadz ^3%s ^1wyszedl z serwera.", g_GamePrefix, nick);
@@ -187,11 +181,16 @@ public client_disconnect(id) {
 	
 	if(g_GameStatus) {
 		new playersCount = players_count();
-		if(playersCount <= ArraySize(g_Mafia)) {
+		if(ArraySize(g_Mafia) < 1) {
+			ColorChat(0, RED, "%s ^1Ostatni czlonek mafii opuscil gre. Miasto wygralo gre w Mafie!!!", g_GamePrefix);
+			game_status_manager(false);
+		} else if(playersCount <= ArraySize(g_Mafia)) {
 			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek miasta. Mafia wygrala gre w Mafie!!!", g_GamePrefix);
 			game_status_manager(false);
 		}
 	}
+	
+	return PLUGIN_CONTINUE;
 }
 
 public death_msg() {
@@ -209,11 +208,6 @@ public death_msg() {
 	} else if(is_user_mafia(id)) {
 		remove_user_mafia(id);
 		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl czlonkiem mafii!", g_GamePrefix, nick);
-		
-		if(ArraySize(g_Mafia) < 1) {
-			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek mafii. Miasto wygralo gre w Mafie!!!", g_GamePrefix);
-			game_status_manager(false);
-		}
 	} else if(id == g_Priest) {
 		g_Priest = 0;
 		ColorChat(0, RED, "%s ^1Zginal ^3%s^1, ktory byl ksiedzem!", g_GamePrefix, nick);
@@ -245,11 +239,16 @@ public death_msg() {
 	
 	if(g_GameStatus) {
 		new playersCount = players_count();
-		if(playersCount <= ArraySize(g_Mafia)) {
+		if(ArraySize(g_Mafia) < 1) {
+			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek mafii. Miasto wygralo gre w Mafie!!!", g_GamePrefix);
+			game_status_manager(false);
+		} else if(playersCount <= ArraySize(g_Mafia)) {
 			ColorChat(0, RED, "%s ^1Zginal ostatni czlonek miasta. Mafia wygrala gre w Mafie!!!", g_GamePrefix);
 			game_status_manager(false);
 		}
 	}
+	
+	return PLUGIN_CONTINUE;
 }
 
 public new_round() {
@@ -260,9 +259,10 @@ public new_round() {
 	}
 	
 	if(!g_MovementStatus) movement_status_manager(true);
-	if(!g_ExtraPluginsStatus) plugins_status_manager(true);
 	
 	start_configuration();
+	
+	return PLUGIN_CONTINUE;
 }
 
 public end_round() {
@@ -273,9 +273,10 @@ public end_round() {
 	}
 	
 	if(!g_MovementStatus) movement_status_manager(true);
-	if(!g_ExtraPluginsStatus) plugins_status_manager(true);
 	
 	start_configuration();
+	
+	return PLUGIN_CONTINUE;
 }
 
 public fast_day(id) {
@@ -291,6 +292,10 @@ public fast_day(id) {
 	write_byte(255);
 	write_byte(0);
 	message_end();
+}
+
+public game_rules(id) {
+	show_motd(id, "mafia_rules.html", "Zasady gry w Mafie");
 }
 
 public game_menu(id) {
@@ -312,8 +317,8 @@ public game_menu(id) {
 	if(g_MovementStatus) menu_additem(gameMenu, "\y[WLACZ] \wBlokada ruchu", .callback = gameMenuCallback);
 	else menu_additem(gameMenu, "\r[WYLACZ] \wBlokada ruchu", .callback = gameMenuCallback);
 	
-	if(g_ExtraPluginsStatus) menu_additem(gameMenu, "\r[WYLACZ] \wPluginy utrudniajace rozgrywke(vip, etc.)", .callback = gameMenuCallback);
-	else menu_additem(gameMenu, "\y[WLACZ] \wPluginy utrudniajace rozgrywke(vip, etc.)", .callback = gameMenuCallback);
+	if(g_ExtraPluginsStatus) menu_additem(gameMenu, "\r[WYLACZ] \wPluginy VIP, Ruletka, Sklep", .callback = gameMenuCallback);
+	else menu_additem(gameMenu, "\y[WLACZ] \wPluginy VIP, Ruletka, Sklep", .callback = gameMenuCallback);
 	
 	if(g_TypeOfDay == START && !g_TypeOfDayStatus) menu_additem(gameMenu, "\y[NASTEPNY TRYB] \wGlosowanie miasta", .callback = gameMenuCallback);
 	else if(g_TypeOfDay == CITY_VOTE && g_TypeOfDayStatus) menu_additem(gameMenu, "\r[TRYB TRWA] \wGlosowanie miasta", .callback = gameMenuCallback);
@@ -541,12 +546,12 @@ public plugins_status_manager(bool:status) {
 	g_ExtraPluginsStatus = status;
 	
 	if(status) {
-		ColorChat(0, RED, "%s ^1Rozrywkowe pluginy ponownie wlaczone(vip, sklep, ruletka)!", g_GamePrefix);
+		ColorChat(0, RED, "%s ^1Pluginy VIP, Ruletka i Sklep zostaly ponownie wlaczone!", g_GamePrefix);
 		unpause("ac", "jbe_vip.amxx");
 		unpause("ac", "jbe_shop.amxx");
 		unpause("ac", "jbe_roulette.amxx");
 	} else {
-		ColorChat(0, RED, "%s ^1Rozrywkowe pluginy zatrzymane(vip, sklep, ruletka)!", g_GamePrefix);
+		ColorChat(0, RED, "%s ^1Pluginy VIP, Ruletka i Sklep zostaly zatrzymane", g_GamePrefix);
 		pause("ac", "jbe_vip.amxx");
 		pause("ac", "jbe_shop.amxx");
 		pause("ac", "jbe_roulette.amxx");
