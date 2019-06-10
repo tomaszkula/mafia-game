@@ -1,3 +1,5 @@
+!UNFINISHED!
+
 # Mafia Game
 Simple Mafia Game Script for Counter Strike 1.6.
 
