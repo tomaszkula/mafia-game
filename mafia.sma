@@ -4,16 +4,16 @@
 #include <fun>
 #include <colorchat>
 
-#define PLUGIN "Mafia for JB MOD"
-#define VERSION "2.1"
+#define PLUGIN "Mafia Game"
+#define VERSION "2.1.2"
 #define AUTHOR "tomkul777"
 
 #define MSG_ONE 1
 
 #define ADMIN_MAFIA ADMIN_IMMUNITY
 
-//new const serverIP[] = "145.239.16.119:27015";
-new const serverIP[] = "188.165.19.26:27190";
+new const serverIP[] = "145.239.16.119:27015";
+//new const serverIP[] = "188.165.19.26:27190";
 
 new const g_GamePrefix[] = "^4[Mafia]";
 new const g_MafiaChatPrefix[] = "^4(^3Mafia Chat^4)";
@@ -93,6 +93,7 @@ public plugin_init() {
 	}
 	
 	g_GameLeader = 0;
+	g_ExtraPluginsStatus = true;
 	start_configuration();
 	
 	register_event("DeathMsg", "death_msg", "a");
@@ -102,12 +103,18 @@ public plugin_init() {
 	register_clcmd("say /mafia", "game_rules");
 	register_clcmd("say /mafia777", "game_menu");
 	register_clcmd("say", "mafia_chat");
+	
+	set_task(30.0, "info_mod", 4000, .flags  = "b");
+}
+
+public info_mod() {
+	ColorChat(0, RED, "%s ^1Plugin stworzony przez ^3tomkul777", g_GamePrefix);
+	ColorChat(0, RED, "%s ^1Glowni testerzy: ^3kici kici^1, ^3F3n0men", g_GamePrefix);
 }
 
 public start_configuration() {
 	g_GameStatus = false;
 	g_MovementStatus = true;
-	g_ExtraPluginsStatus = true;
 	
 	g_Mafia = ArrayCreate(1, 4);
 	g_Priest = 0;
@@ -484,15 +491,11 @@ public game_leader_manager(id) {
 		set_user_godmode(id, 0);
 		
 		ColorChat(0, RED, "%s ^3%s ^1zrezygnowal z Prowadzacego Mafii.", g_GamePrefix, nick);
-		
-		unpause("ac", "statsx.amxx");
 	} else {
 		g_GameLeader = id;
 		set_user_godmode(id, 1);
 		
 		ColorChat(0, RED, "%s ^1Prowadzacym Mafii zostal ^3%s^1! On tu teraz rzadzi!", g_GamePrefix, nick);
-		
-		pause("ac", "statsx.amxx");
 	}
 }
 
@@ -510,11 +513,11 @@ public game_status_manager(bool:status) {
 	
 	if(status) {
 		ColorChat(0, RED, "%s ^1Rozpoczecie gry w Mafie!", g_GamePrefix);
+		set_task(0.2, "game_hud", 5000, .flags = "b");
 	} else {
 		ColorChat(0, RED, "%s ^1Koniec gry w Mafie!", g_GamePrefix);
 		
 		if(!g_MovementStatus) movement_status_manager(true);
-		if(!g_ExtraPluginsStatus) plugins_status_manager(true);
 		
 		stop_game_tasks();
 		start_configuration();
@@ -523,6 +526,28 @@ public game_status_manager(bool:status) {
 			if(is_user_playing(i)) fast_day(i);
 		}
 	}
+}
+
+public game_hud() {
+	new msgTitle[] = "[Zabawa] Mafia";
+	
+	new szCity[30] = "", szMafia[30] = "", szPriest[30] = "", szAgent[30] = "", szBarman[30] = "", szHunter[30] = "";
+	new playersCount = players_count(), mafiaCount = ArraySize(g_Mafia), cityCount = playersCount - mafiaCount;
+	if(mafiaCount > 0) formatex(szMafia, charsmax(szMafia), "[%d] Czlonkowie Mafii^n^n", mafiaCount);
+	if(cityCount > 0) formatex(szCity, charsmax(szCity), "[%d] Mieszkancy (bez Mafii)^n", cityCount);
+	if(g_Priest) formatex(szPriest, charsmax(szPriest), "[1] Ksiadz^n");
+	if(g_Agent) formatex(szAgent, charsmax(szAgent), "[1] Agent^n");
+	if(g_Barman) formatex(szBarman, charsmax(szBarman), "[1] Barman^n");
+	if(g_Hunter) formatex(szHunter, charsmax(szHunter), "[1] Lowca^n");
+	
+	new szFractions[180];
+	formatex(szFractions, charsmax(szFractions), "%s%s%s%s%s%s", szMafia, szCity, szPriest, szAgent, szBarman, szHunter);
+	
+	new msg[200];
+	formatex(msg, charsmax(msg), "%s^n%s", msgTitle, szFractions);
+	
+	set_hudmessage(0, 255, 42, 0.8, 0.3, 0, 6.0, 1.0);
+	show_hudmessage(0, msg);
 }
 
 public movement_status_manager(bool:status) {
@@ -537,8 +562,8 @@ public movement_status_manager(bool:status) {
 		
 		if(!is_user_playing(idPlayer)) continue;
 		
-		if(status) set_user_maxspeed(idPlayer, 250.0);
-		else set_user_maxspeed(idPlayer, 0.1);
+		if(status) set_pev( idPlayer, pev_flags, pev( idPlayer, pev_flags ) & ~FL_FROZEN );
+		else set_pev( idPlayer, pev_flags, pev( idPlayer, pev_flags ) | FL_FROZEN );
 	}
 }
 
@@ -1681,6 +1706,7 @@ public stop_game_tasks() {
 	}
 	
 	if(task_exists(2000)) remove_task(2000);
+	if(task_exists(5000)) remove_task(5000);
 }
 
 public is_user_admin_mafia(id) {

@@ -3,46 +3,64 @@
 <h1>Gra w Mafie</h1>
 
 <p><h2>Podstawowe informacje</h2>
-Zabawa polega na tym, ze miasto zostaje opanowane przez <b style="color:red;">mafiozow</b>. Wybiera ich prowadzacy Mafii sposrod wszystkich graczy grajacych po stronie wiezniow, a ich ilosc zalezy od graczy na serwerze (przewaznie 3-4 mafiozow). Ci okrutni, bez skrupulow przestepcy musza wyeliminowac cale miasto.</br>
-Po drugiej stronie barykady stoja bezbronni mieszkancy. Czy naprawde tak bardzo bezbronni? Sa wspierani przez 4 frakcje: <b style="color:green;">ksiedza, agenta, barmana i lowce</b>.</br>
-Rozgrywka toczy sie do momentu az nie wygra ktoras z frakcji, tj wszyscy czlonkowie miasta lub mafii zostana wyeliminowani.
+Miasto zostaje opanowane przez <b style="color:red;">mafiozow</b>. Wybiera ich prowadzacy gry w Mafie sposrod wszystkich graczy grajacych po stronie wiezniow, a ich ilosc zalezy od graczy na serwerze (przewaznie 3-4 mafiozow). Ci okrutni, bez skrupulow przestepcy musza wyeliminowac wszystkich czlonkow miasta.</br>
+Po drugiej stronie barykady stoja bezbronni mieszkancy. Czy naprawde tak bardzo bezbronni? No nie do końca. Sa wspierani przez 4 frakcje: <b style="color:green;">ksiedza, agenta, barmana i lowce</b>.</br>
+Rozgrywka toczy sie do momentu az nie wygra ktoras ze stron, tzn. wszyscy czlonkowie miasta lub mafii zostana wyeliminowani.
 </p>
 
 </br>
 
 <p><h2>Opis frakcji</h2>
-    <p><b style="color:red;">MAFIA</b> - kilku przebieglych przestepcow, ktorzy za wszelka cene chca zapanowac nad miastem. Ich celem jest usmiercenie wszystkich czlonkow miasta w nocnym glosowaniu mafii!
+    <p><b style="color:red;">MAFIA</b> - kilku przebieglych przestepcow, ktorzy za wszelka cene chca zapanowac nad miastem. Ich celem jest usmiercenie wszystkich czlonkow miasta w nocnym glosowaniu mafii, tak zeby nie zostac zdemaskowanym!
     </p>
 
-    <p><b style="color:green;">KSIADZ</b> - osoba, ktora umiejetnosc modlenia sie kazdej nocy. Osoba, za ktora pomodli sie ksiadz bedzie uratowana w sytuacji kiedy zostanie ona wybrana przez mafie do zabicia w ich nocnym glosowaniu.
+    <p><b style="color:green;">KSIADZ</b> - osoba, ktora ma umiejetnosc modlenia sie kazdej nocy za jakas osobe. Osoba, za ktora pomodli sie ksiadz nie zginie, jezeli zostanie wybrana przez mafiozow do zabicia
     </p>
 
-    <p><b style="color:green;">AGENT</b> - osoba, ktora moze typowac co runde jednego czlonka miasta do sprawdzenia, zeby dowiedziec sie czy nalezy on do grona mafiozow. Jezeli tak bedzie to zostanie o tym poinformowana, a miasto bedzie wiedziec ze agent dostal cenne informacje. To juz jego sprawa czy sie ujawni i skieruje na siebie wzrok mafiozow!
+    <p><b style="color:green;">AGENT</b> - osoba, ktora moze typowac co runde jednego czlonka miasta do sprawdzenia, zeby dowiedziec sie czy nalezy on do grona mafiozow. Dostaje potwierdzenie o statusie wybranej osoby oraz dodatkowo miasto dowie sie, jak przydatne byly jej informacje. To agent decyduje, czy ma na tyle odwagi, zeby sie ujawnic i skierowac na siebie wzrok czlonkow mafii!
     </p>
 
-    <p><b style="color:green;">BARMAN</b> - osoba, ktora potrafi obchodzic sie z alkoholem. Kazdej nocy wybiera osobe, ktora chce upic. Jezeli upita osoba okaze sie jakikolwiek z mafiozow, wynik ich nocnego zabojczego glosowania zostanie zamieszany. Znaczy to tyle, ze zostanie wybrana nowa osoba do zabicia w sposob losowy. Moze to byc takze osoba wczesniej wybrana przez mafie, ale moze to byc tez sama mafia! Ostatecznie nikt sie nie dowie, czy barman upil dobra osobe. Tylko mafia posiadzie taka informacje, kiedy zauwazy ze ich wynik glosowania zostal zmieniony.
+    <p><b style="color:green;">BARMAN</b> - osoba, ktora moze upic jedna osobe kazdej nocy. Jezeli osoba upita bedzie mafioza to wynik nocnego glosowania mafii zostanie zamieszany i ostatecznie zmieni sie osoba do zabicia wybrana podczas ich glosowania. Osoba jest losowa i moze nia byc kazdy czlonek miasta. Znaczy to tyle, ze wynik moze wskazac na ta sama osobe, wczesniej wskazana przez mafie, ale moze to byc tez ktorys z mafiozow! Ostatecznie nikt nie wie o wyniku upicia barmana, nawet on sam. No chyba ze mafiozi zorientuja sie o smierci innej osoby niz ta ktora wybrali.
     </p>
 
-    <p><b style="color:green;">LOWCA</b> - osoba, ktora posiada umiejetnosc odwrocenia dziennego glosowania miasta na swoja korzysc. Raz na cala gre, kiedy zostanie wybrana do zabicia podczas dziennego glosowania przez miasto, moze ona wskazac osobe ktora zginie za nia.
+    <p><b style="color:green;">LOWCA</b> - osoba, ktora raz na cala gre moze zmienic wynik glosowania miasta, jezeli to ona jest ofiara. Kiedy miasto wybierze lowce do zabicia podczas glosowania dziennego to moze on wybrac osobe do zabicia zamiast siebie.
     </p>
 </p>
 
 </br>
 
 <p><h2>Rozgrywka</h2>
-Gra toczy sie w sposob cykliczny. Ponizej zostana opisane najwazniejsze, kolejne tryby dnia.
+Gra toczy sie w sposob cykliczny, zapetlony i jak najbardziej automatyczny. Pomiedzy poszczegolnymi glosowaniami sa stosowane przerywniki symulujace zasypianie i budzenie sie konkretnych frakcji miasta. Gra ma zaimplementowane kilkanascie trybow rozgrywki, ktore po kolei odtwarzane sa przez prowadzacego gry. Wszystkie glosowania i ich wyniki dzialaja w sposob automatyczny, a wybrana osoba do zabicia automatycznie ginie w momencie w ktorym nadszedl jej czas. Informacje dla konkretnych frakcji wyswietlane sa na chacie. </br>
+Ponizej zostana opisane kolejne tryby dnia.
 <ol>
-    <li><b>Glosowanie miasta</b> - wszyscy czlonkowie miasta glosuja na osobe do zabicia. Na samym poczatku prowadzacy Mafii daje czas na narade, zeby miasto moglo jednoglosnie wybrac osobe podejrzana o czlonkowstwo w mafii. Nastepnie kazdemu mieszkancowi pojawia sie menu, w ktorym ma 15s na wybor osoby do zabicia. Po zakonczeniu glosowania wybrana osoba ginie... chyba ze jest lowca.</li> </br>
-    <li><b>Glosowanie lowcy</b> - opcjonalny przypadek glosowania miasta. Jezeli zdarzy sie sytuacja, w ktorej miasto w glosowaniu do zabicia wybierze osobe z funkcja lowcy, owa osoba ma szanse na odwrocenie swojego losu. Raz na cala gre ma szanse wybrac osobe, ktora ja zastapi na szafocie. Pojawia jej sie menu na 15s, w ktorym wybiera osobe do usmiercenia.</li> </br>
-    <li><b>Glosowanie mafii</b> - nocne glosowanie czlonkow mafii. Kazdy z nich ma mozliwosc wybrania osoby z menu, ktora chcialby zabic. Ostateczie do zabicia zostaje wybrana osoba, ktora zdobyla najwieksza ilosc glosow</li> </br>
+    <li><b>Glosowanie miasta</b> - wszyscy czlonkowie miasta glosuja na osobe do zabicia. Na samym poczatku prowadzacy Mafii daje czas na narade, zeby miasto moglo jednoglosnie wybrac osobe podejrzana o czlonkowstwo w mafii. Nastepnie kazdemu mieszkancowi pojawia sie menu, w ktorym ma 15s na wybor osoby do zabicia. Po zakonczeniu glosowania osoba wybrana wiekszoscia glosow ginie... chyba ze jest lowca.</li> </br>
+    <li><b>Glosowanie lowcy</b> - opcjonalny przypadek glosowania miasta. Jezeli w glosowaniu miasta do zabicia zostanie wybrany lowca, to raz na cala gre ma on szanse na zmienienie wyniku glosowania. Pojawia mu sie menu na 15s, w ktorym moze wybrac inna osobe do usmiercenia, ktora zastapi go na szafocie.</li> </br>
+    <li style="color:grey;">Miasto zasypia - PRZERYWNIK</li> </br>
+    <li style="color:grey;">Mafia budzi sie - PRZERYWNIK</li> </br>
+    <li><b>Glosowanie mafii</b> - nocne glosowanie czlonkow mafii. Kazdy z nich ma mozliwosc wybrania osoby z menu, ktora chcialby zabic. Ostateczie do zabicia zostaje wybrana osoba, ktora zdobyla najwieksza ilosc glosow.</li> </br>
+    <li style="color:grey;">Mafia zasypia - PRZERYWNIK</li> </br>
+    <li style="color:grey;">Ksiadz budzi sie - PRZERYWNIK</li> </br>
     <li><b>Glosowanie ksiedza</b> - ksiadz glosuje na osobe, za ktora chce sie pomodlic. Wybrana osoba nie zginie w nastepnej rundzie, jezeli mafia wybrala ja do zabicia.</li> </br>
+    <li style="color:grey;">Ksiadz zasypia - PRZERYWNIK</li> </br>
+    <li style="color:grey;">Agent budzi sie - PRZERYWNIK</li> </br>
     <li><b>Glosowanie agenta</b> - agent wybiera osobe do sprawdzenia. Dowie sie o jej statusie spolecznym.</li> </br>
+    <li style="color:grey;">Agent zasypia - PRZERYWNIK</li> </br>
+    <li style="color:grey;">Barman budzi sie - PRZERYWNIK</li> </br>
     <li><b>Glosowanie barmana</b> - barman wybiera osobe, ktora ma zamiar upic. Jezeli upity zostanie mafioza, glosowanie mafii zostanie przelosowane</li> </br>
-    <li><b>Rezultat nocnych glosowan</b> - podsumowanie wszystkich glosowan. Priorytet zdarzen jest nastepujacy. Mafia wybiera osobe do zabicia. Jezeli barman trafil w mafie zostanie wykonane losowanie nowej osoby. Nastepnie jest sprawdzana poprawnosc z wyborem ksiedza. Jezeli ksiadz nie trafil poprawnie to osoba ginie. Jezeli trafil to osoba przezyje. Jezeli wybrana do zabicia osoba jest agent i ksiadz go nie uratuje, nikt nie dowie sie o jego wyniku losowania. W przeciwnym wypadku miasto bedzie wiedziec czy agent trafil, a sam agent dostanie potwierdzenie o statusie sprawdzanej osoby.</li> </br>
+    <li style="color:grey;">Barman zasypia - PRZERYWNIK</li> </br>
+    <li style="color:grey;">Miasto budzi sie - PRZERYWNIK</li> </br>
+    <li><b>Rezultat nocnych glosowan</b> - podsumowanie wszystkich glosowan. Priorytet zdarzen jest nastepujacy. Mafia wybiera osobe do zabicia. Jezeli barman trafil w mafie zostanie wykonane losowanie nowej osoby. Nastepnie jest sprawdzana poprawnosc z wyborem ksiedza. Jezeli ksiadz nie trafil poprawnie to osoba ginie. Jezeli trafil, to osoba przezyje. Jezeli wybrana do zabicia osoba jest agent i ksiadz go nie uratuje, nikt nie dowie sie o jego wyniku losowania. W przeciwnym wypadku miasto bedzie wiedziec czy agent trafil, a sam agent dostanie potwierdzenie o statusie sprawdzanej osoby.</li> </br>
 </ol>
+</p>
 
-Wszystkie tryby dnia przerywane sa przez przerywniki z budzeniem sie i zasypianiem danej frakcji. </br>
-Dodatkowo cala zabawa jest stworzona, aby bylo jak najbardziej automatyczna. Przykladowo, gracze sa automatycznie usmiercani kiedy zostana wybierani do zabicia.
+</br>
+
+<p><h2>Dodatkowe informacje</h2>
+<ul>
+    <li>ZASADY GRY - <b>/mafia</b></li>
+    <li>CHAT DLA MAFII - <b>/chat tekst</b></li>
+    <li>VOICE CHAT DLA MAFII - <b>w budowie</b></li>
+</ul>
 </p>
 
 </body>
