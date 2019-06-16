@@ -5,7 +5,7 @@
 #include <colorchat>
 
 #define PLUGIN "Mafia Game"
-#define VERSION "2.1.2"
+#define VERSION "2.1.3"
 #define AUTHOR "tomkul777"
 
 #define MSG_ONE 1
@@ -104,12 +104,16 @@ public plugin_init() {
 	register_clcmd("say /mafia777", "game_menu");
 	register_clcmd("say", "mafia_chat");
 	
-	set_task(30.0, "info_mod", 4000, .flags  = "b");
+	set_task(120.0, "info_mod", 4000, .flags  = "b");
+	set_task(60.0, "info_mafia", 4001, .flags  = "b");
 }
 
 public info_mod() {
-	ColorChat(0, RED, "%s ^1Plugin stworzony przez ^3tomkul777", g_GamePrefix);
-	ColorChat(0, RED, "%s ^1Glowni testerzy: ^3kici kici^1, ^3F3n0men", g_GamePrefix);
+	ColorChat(0, RED, "%s ^1Plugin stworzony przez ^3tomkul777^1. Glowni testerzy: ^3kici kici^1, ^3F3n0men", g_GamePrefix);
+}
+
+public info_mafia() {
+	ColorChat(0, RED, "%s ^1Nie wiesz na czym polega ta zabawa? Wpisz ^3/mafia ^1zeby zobaczyc zasady!", g_GamePrefix);
 }
 
 public start_configuration() {
@@ -1163,7 +1167,7 @@ public votes_result_delay() {
 			}
 		}
 	} else {
-		ColorChat(0, RED, "%s ^1Mafia nikogo nie wybrala do zabicia. Glosy ksiedza i barmana sa niepotrzebne.", g_VotesResultPrefix);
+		ColorChat(0, RED, "%s ^1Mafia nikogo nie wybrala do zabicia.", g_VotesResultPrefix);
 		
 		if(g_Agent) {
 			set_task(1.0, "agent_result", 1001, .flags = "a", .repeat = 1);
@@ -1735,6 +1739,17 @@ public remove_user_mafia(id) {
 
 public add_user_mafia(id) {
 	ArrayPushCell(g_Mafia, id);
+}
+
+public client_infochanged(id){
+	new newname[32], oldname[32];
+	get_user_info(id, "name", newname, 31);
+	get_user_name(id, oldname, 31);
+	if(!equal(oldname, newname)){
+		set_user_info(id,"name",oldname);
+		ColorChat(id, GREEN, "%s ^1Zakaz zmiany nicku podczas zabawy!", g_GamePrefix)
+		return PLUGIN_HANDLED;
+	}
 }
 /* AMXX-Studio Notes - DO NOT MODIFY BELOW HERE
 *{\\ rtf1\\ ansi\\ deff0{\\ fonttbl{\\ f0\\ fnil Tahoma;}}\n\\ viewkind4\\ uc1\\ pard\\ lang1045\\ f0\\ fs16 \n\\ par }
