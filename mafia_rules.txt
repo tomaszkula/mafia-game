@@ -1,0 +1,27 @@
+MAFIA - kilku przebieglych przestepcow, ktorzy za wszelka cene chca zapanowac nad miastem. 
+Ich celem jest usmiercenie wszystkich czlonkow miasta w nocnym glosowaniu mafii, tak zeby nie zostac zdemaskowanym!
+Czlonkowie Mafii maja wlasny czat pod komenda /chat text.
+
+KSIADZ - osoba, ktora modli sie kazdej nocy za jedna osobe. 
+Wybrana przez ksiedza osoba nie ginie nastepnego dnia, jezeli zostanie wybrana przez mafiozow do zabicia
+
+AGENT - osoba, ktora co noc sprawdza jedna osobe i jej status przynaleznosci do Mafii.
+Na poczatku nastepnego dnia otrzymuje ona potwierdzenie o statusie wybranej osoby, a miasto dowie sie o trafnosci wyboru.
+To agent decyduje, czy ma na tyle odwagi, zeby sie ujawnic i skierowac na siebie wzrok czlonkow Mafii!
+
+BARMAN - osoba, ktora upija jedna osobe kazdej nocy.
+Jezeli upita osoba nalezy do grona Mafiozow, wynik ich nocnego glosowania zostanie zamieszany i ostatecznie zmieni sie osoba do zabicia.
+Osoba jest losowa i moze nia byc kazdy czlonek miasta (nawet mafioza). 
+Ostatecznie nikt nie wie o wyniku upicia barmana, nawet on sam. 
+No chyba ze jestescie na tyle madrzy, zeby ocenic ze Mafia nie wybrala swojego czlonka do zabicia, jezeli on zginie :)
+
+LOWCA - osoba, ktora raz na gre moze zmienic wynik glosowania miasta.
+Jezeli w dziennym glosowaniu zostal wybrany na ofiare to moze wybrac osobe do zabicia zamiast siebie.
+Umiejetnosc jednorazowa i dostepna tylko podczas glosowania miasta.
+
+SEDZIA - osoba, ktora co noc skazuje decydujacym wyrokiem jednego mieszkanca.
+Jezeli podczas glosowania miasta wskazana osoba zostanie wybrana do dogrywki i w tej dogrywce beda maksymalnie 2 osoby (w tym wybrana osoba),
+to wyrok skazuje ją na śmierć bez dodatkowego głosowania.
+
+SAMOBOJCA - osoba, ktora moze popelnic tzw. kamikadze, dodatkowo zabierajac ze soba innego mieszkanca.
+Umiejetnosc dostepna tylko podczas dnia i na komende /zabij.
